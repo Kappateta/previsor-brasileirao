@@ -283,7 +283,9 @@ async function buscarStats(time, lado) {
   const key = time + '_' + lado;
   if (cache[key]) return cache[key];
   try {
-    const res = await fetch(`${BACKEND}/stats/${encodeURIComponent(time)}/${lado}`);
+    const res = await fetch(`${BACKEND}/stats/${encodeURIComponent(time)}/${lado}`, {
+  signal: AbortSignal.timeout(120000)
+});
     if (!res.ok) throw new Error();
     const data = await res.json();
     cache[key] = data;
