@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Previsor Brasileirao — ML</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0a; --surface: #141414; --surface2: #1e1e1e;
+    --border: #2a2a2a; --border2: #3a3a3a;
+    --text: #f0f0f0; --text2: #999; --text3: #555;
+    --radius: 12px; --radius-sm: 8px;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+  .header {
+    background: #000; border-bottom: 1px solid var(--border);
+    padding: 1rem 1.5rem; display: flex; align-items: center;
+    justify-content: space-between; position: sticky; top: 0; z-index: 10;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .ball-icon { width: 36px; height: 36px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .header h1 { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; color: #fff; line-height: 1; }
+  .header p { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .badge-ml { background: var(--surface2); border: 1px solid var(--border2); color: var(--text2); font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 20px; }
+
+  .main { max-width: 680px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  .section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1rem; }
+  .section-header { background: #000; border-bottom: 1px solid var(--border); padding: 10px 16px; display: flex; align-items: center; gap: 8px; }
+  .section-header span { font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 1.5px; color: var(--text2); }
+  .section-body { padding: 1.25rem; }
+
+  .teams-row { display: grid; grid-template-columns: 1fr 48px 1fr; gap: 10px; align-items: end; }
+  .team-box label { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 6px; }
+  .team-box select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+    padding: 10px 32px 10px 12px; border-radius: var(--radius-sm); cursor: pointer;
+    outline: none; appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 7L11 1' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center; transition: border-color 0.15s;
+  }
+  .team-box select:focus { border-color: #fff; }
+  .vs-box { display: flex; align-items: center; justify-content: center; padding-bottom: 2px; }
+  .vs-box span { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--text3); }
+
+  .info-banner {
+    margin-top: 10px; padding: 8px 12px;
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: var(--radius-sm); font-size: 12px; color: var(--text2);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .dot-green { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1.25rem; }
+  .stat-group label { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-bottom: 5px; }
+  .stat-group input[type=number] {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+    padding: 9px 12px; border-radius: var(--radius-sm); outline: none; transition: border-color 0.15s;
+    -moz-appearance: textfield;
+  }
+  .stat-group input[type=number]::-webkit-inner-spin-button,
+  .stat-group input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .stat-group input[type=number]:focus { border-color: #fff; }
+
+  .col-header {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px;
+  }
+  .col-header span {
+    font-size: 10px; font-weight: 700; color: #fff;
+    text-transform: uppercase; letter-spacing: 1px;
+    text-align: center; padding: 4px 0;
+    background: var(--surface2); border-radius: var(--radius-sm);
+    border: 1px solid var(--border2);
+  }
+
+  .aprov-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .aprov-item label { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-bottom: 8px; }
+  .aprov-display { display: flex; align-items: baseline; gap: 4px; margin-bottom: 8px; }
+  .aprov-num { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--text); line-height: 1; }
+  .aprov-pct { font-size: 13px; color: var(--text2); }
+  input[type=range] { width: 100%; -webkit-appearance: none; appearance: none; height: 4px; background: var(--border2); border-radius: 2px; outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; background: #fff; border-radius: 50%; cursor: pointer; transition: transform 0.1s; }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+  input[type=range]::-moz-range-thumb { width: 16px; height: 16px; background: #fff; border-radius: 50%; border: none; cursor: pointer; }
+
+  .btn-predict {
+    width: 100%; padding: 14px; background: #fff; color: #000; border: none;
+    border-radius: var(--radius-sm); font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px; letter-spacing: 2px; cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-predict:hover { background: #e5e5e5; }
+  .btn-predict:active { transform: scale(0.98); }
+
+  .result-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; display: none; animation: fadeUp 0.4s ease; margin-top: 1rem; }
+  .result-section.show { display: block; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  .result-hero { background: #000; border-bottom: 1px solid var(--border); padding: 1.5rem; text-align: center; }
+  .result-hero .r-label { font-size: 11px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+  .result-hero .r-winner { font-family: 'Bebas Neue', sans-serif; font-size: 42px; letter-spacing: 2px; color: #fff; line-height: 1; margin-bottom: 6px; }
+  .result-hero .r-sub { font-size: 13px; color: var(--text2); }
+  .result-body { padding: 1.25rem; }
+
+  .prob-row { display: grid; grid-template-columns: 120px 1fr 44px; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .prob-row:last-child { margin-bottom: 0; }
+  .prob-row .p-label { font-size: 13px; color: var(--text2); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width 0.7s cubic-bezier(.4,0,.2,1); width: 0%; }
+  .fill-win { background: #fff; }
+  .fill-draw { background: #555; }
+  .fill-lose { background: #333; border: 1px solid #444; }
+  .prob-row .p-pct { font-size: 13px; font-weight: 600; color: var(--text); text-align: right; }
+
+  .divider { height: 1px; background: var(--border); margin: 1.25rem 0; }
+  .models-title { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .models-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .model-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; text-align: center; }
+  .model-card .m-name { font-size: 10px; color: var(--text3); letter-spacing: 0.5px; display: block; margin-bottom: 5px; }
+  .model-card .m-pred { font-size: 13px; font-weight: 600; color: var(--text); display: block; }
+  .disclaimer { font-size: 11px; color: var(--text3); text-align: center; margin-top: 1.25rem; line-height: 1.6; }
+
+  .footer { text-align: center; padding: 2rem 1.5rem; font-size: 11px; color: var(--text3); border-top: 1px solid var(--border); margin-top: 2rem; }
+
+  @media (max-width: 480px) {
+    .main { padding: 1rem 1rem 3rem; }
+    .teams-row { grid-template-columns: 1fr 36px 1fr; }
+    .result-hero .r-winner { font-size: 30px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <div class="ball-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20A14.5 14.5 0 0 0 12 2"/><path d="M2 12h20"/></svg>
+    </div>
+    <div>
+      <h1>Previsor Brasileirao</h1>
+      <p>Machine Learning &middot; Serie A</p>
+    </div>
+  </div>
+  <span class="badge-ml">TCC &middot; Eng. Software</span>
+</header>
+
+<main class="main">
+
+  <div class="section">
+    <div class="section-header">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Times</span>
+    </div>
+    <div class="section-body">
+      <div class="teams-row">
+        <div class="team-box">
+          <label>Mandante</label>
+          <select id="mandante" onchange="atualizarStats()"></select>
+        </div>
+        <div class="vs-box"><span>VS</span></div>
+        <div class="team-box">
+          <label>Visitante</label>
+          <select id="visitante" onchange="atualizarStats()"></select>
+        </div>
+      </div>
+      <div class="info-banner">
+        <div class="dot-green"></div>
+        <span>Estatisticas preenchidas automaticamente com medias historicas do Brasileirao (2003–2023)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span>Estatisticas da Partida</span>
+    </div>
+    <div class="section-body">
+      <div class="col-header">
+        <span id="col-m">Mandante</span>
+        <span id="col-v">Visitante</span>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-group"><label>Chutes</label><input type="number" id="chutes_m" min="0" max="40"></div>
+        <div class="stat-group"><label>Chutes</label><input type="number" id="chutes_v" min="0" max="40"></div>
+        <div class="stat-group"><label>No alvo</label><input type="number" id="alvo_m" min="0" max="20"></div>
+        <div class="stat-group"><label>No alvo</label><input type="number" id="alvo_v" min="0" max="20"></div>
+        <div class="stat-group"><label>Passes</label><input type="number" id="passes_m" min="0" max="1000"></div>
+        <div class="stat-group"><label>Passes</label><input type="number" id="passes_v" min="0" max="1000"></div>
+        <div class="stat-group"><label>Faltas</label><input type="number" id="faltas_m" min="0" max="40"></div>
+        <div class="stat-group"><label>Faltas</label><input type="number" id="faltas_v" min="0" max="40"></div>
+        <div class="stat-group"><label>Escanteios</label><input type="number" id="escanteios_m" min="0" max="20"></div>
+        <div class="stat-group"><label>Escanteios</label><input type="number" id="escanteios_v" min="0" max="20"></div>
+        <div class="stat-group"><label>Amarelos</label><input type="number" id="amarelo_m" min="0" max="10"></div>
+        <div class="stat-group"><label>Amarelos</label><input type="number" id="amarelo_v" min="0" max="10"></div>
+        <div class="stat-group"><label>Vermelhos</label><input type="number" id="vermelho_m" min="0" max="5"></div>
+        <div class="stat-group"><label>Vermelhos</label><input type="number" id="vermelho_v" min="0" max="5"></div>
+        <div class="stat-group"><label>Posse %</label><input type="number" id="posse_m" min="0" max="100"></div>
+        <div class="stat-group"><label>Posse %</label><input type="number" id="posse_v" min="0" max="100"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>Aproveitamento Recente (ultimos 5 jogos)</span>
+    </div>
+    <div class="section-body">
+      <div class="aprov-row">
+        <div class="aprov-item">
+          <label id="aprov-label-m">Mandante</label>
+          <div class="aprov-display">
+            <span class="aprov-num" id="aprov_m_num">60</span>
+            <span class="aprov-pct">%</span>
+          </div>
+          <input type="range" id="aprov_m" min="0" max="100" value="60" step="1" oninput="document.getElementById('aprov_m_num').textContent=this.value">
+        </div>
+        <div class="aprov-item">
+          <label id="aprov-label-v">Visitante</label>
+          <div class="aprov-display">
+            <span class="aprov-num" id="aprov_v_num">40</span>
+            <span class="aprov-pct">%</span>
+          </div>
+          <input type="range" id="aprov_v" min="0" max="100" value="40" step="1" oninput="document.getElementById('aprov_v_num').textContent=this.value">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-predict" onclick="prever()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    Prever Resultado
+  </button>
+
+  <div class="result-section" id="result-section">
+    <div class="result-hero">
+      <div class="r-label">Previsao dos modelos</div>
+      <div class="r-winner" id="r-winner">—</div>
+      <div class="r-sub" id="r-sub">—</div>
+    </div>
+    <div class="result-body">
+      <div class="prob-section">
+        <div class="prob-row">
+          <span class="p-label" id="label-win">Mandante</span>
+          <div class="bar-track"><div class="bar-fill fill-win" id="bar-win"></div></div>
+          <span class="p-pct" id="pct-win">0%</span>
+        </div>
+        <div class="prob-row">
+          <span class="p-label">Empate</span>
+          <div class="bar-track"><div class="bar-fill fill-draw" id="bar-draw"></div></div>
+          <span class="p-pct" id="pct-draw">0%</span>
+        </div>
+        <div class="prob-row">
+          <span class="p-label" id="label-lose">Visitante</span>
+          <div class="bar-track"><div class="bar-fill fill-lose" id="bar-lose"></div></div>
+          <span class="p-pct" id="pct-lose">0%</span>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="models-title">Voto de cada modelo</div>
+      <div class="models-grid">
+        <div class="model-card"><span class="m-name">XGBoost</span><span class="m-pred" id="pred-xgb">—</span></div>
+        <div class="model-card"><span class="m-name">Random Forest</span><span class="m-pred" id="pred-rf">—</span></div>
+        <div class="model-card"><span class="m-name">Rede Neural</span><span class="m-pred" id="pred-mlp">—</span></div>
+      </div>
+      <p class="disclaimer">Estatisticas baseadas nas medias historicas do Brasileirao Serie A (2003–2023).<br>Acuracia: XGBoost 51,99% &middot; Random Forest 50,74% &middot; Rede Neural 50,30%</p>
+    </div>
+  </div>
+
+</main>
+
+<footer class="footer">
+  TCC — Engenharia de Software &middot; Analise Comparativa de Algoritmos de ML &middot; Brasileirao Serie A
+</footer>
+
+<script>
+const STATS = {"mandante": {"America-MG": {"chutes": 12.2, "alvo": 3.1, "passes": 335.4, "faltas": 12.1, "escanteios": 4.5, "amarelo": 1.5, "vermelho": 0.1, "posse": 47.4}, "America-RN": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "Athletico-PR": {"chutes": 6.1, "alvo": 1.7, "passes": 179.3, "faltas": 5.8, "escanteios": 2.3, "amarelo": 0.8, "vermelho": 0.0, "posse": 53.1}, "Atletico-GO": {"chutes": 6.9, "alvo": 2.0, "passes": 198.3, "faltas": 7.5, "escanteios": 3.0, "amarelo": 1.1, "vermelho": 0.1, "posse": 49.2}, "Atletico-MG": {"chutes": 6.9, "alvo": 1.9, "passes": 213.2, "faltas": 6.4, "escanteios": 2.9, "amarelo": 0.9, "vermelho": 0.0, "posse": 56.7}, "Avai": {"chutes": 7.2, "alvo": 1.4, "passes": 213.4, "faltas": 8.9, "escanteios": 3.1, "amarelo": 1.5, "vermelho": 0.1, "posse": 46.4}, "Bahia": {"chutes": 7.9, "alvo": 2.7, "passes": 225.5, "faltas": 8.1, "escanteios": 3.1, "amarelo": 1.1, "vermelho": 0.1, "posse": 51.0}, "Barueri": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "Botafogo-RJ": {"chutes": 5.7, "alvo": 1.7, "passes": 162.8, "faltas": 5.7, "escanteios": 2.1, "amarelo": 0.9, "vermelho": 0.0, "posse": 49.6}, "Bragantino": {"chutes": 13.2, "alvo": 4.2, "passes": 338.2, "faltas": 12.3, "escanteios": 5.4, "amarelo": 2.1, "vermelho": 0.1, "posse": 51.3}, "Brasiliense": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "CSA": {"chutes": 13.0, "alvo": 3.8, "passes": 311.6, "faltas": 14.4, "escanteios": 3.7, "amarelo": 2.3, "vermelho": 0.1, "posse": 42.0}, "Ceara": {"chutes": 10.8, "alvo": 3.5, "passes": 273.3, "faltas": 11.1, "escanteios": 4.4, "amarelo": 1.8, "vermelho": 0.1, "posse": 46.5}, "Chapecoense": {"chutes": 11.8, "alvo": 2.4, "passes": 316.5, "faltas": 13.7, "escanteios": 4.9, "amarelo": 1.7, "vermelho": 0.1, "posse": 47.6}, "Corinthians": {"chutes": 6.1, "alvo": 1.7, "passes": 220.7, "faltas": 5.8, "escanteios": 2.6, "amarelo": 0.8, "vermelho": 0.0, "posse": 55.2}, "Coritiba": {"chutes": 4.9, "alvo": 1.0, "passes": 148.8, "faltas": 6.2, "escanteios": 2.1, "amarelo": 1.0, "vermelho": 0.1, "posse": 47.6}, "Criciuma": {"chutes": 0.1, "alvo": 0.0, "passes": 4.5, "faltas": 0.2, "escanteios": 0.1, "amarelo": 0.0, "vermelho": 0.0, "posse": 61.0}, "Cruzeiro": {"chutes": 5.2, "alvo": 1.2, "passes": 150.5, "faltas": 4.5, "escanteios": 2.2, "amarelo": 0.8, "vermelho": 0.0, "posse": 53.9}, "Cuiaba": {"chutes": 10.6, "alvo": 3.2, "passes": 297.6, "faltas": 9.5, "escanteios": 4.1, "amarelo": 1.4, "vermelho": 0.1, "posse": 47.3}, "Figueirense": {"chutes": 2.1, "alvo": 0.0, "passes": 59.9, "faltas": 3.1, "escanteios": 0.9, "amarelo": 0.4, "vermelho": 0.0, "posse": 44.9}, "Flamengo": {"chutes": 7.0, "alvo": 2.1, "passes": 216.3, "faltas": 6.3, "escanteios": 2.9, "amarelo": 0.8, "vermelho": 0.0, "posse": 59.3}, "Fluminense": {"chutes": 6.1, "alvo": 1.8, "passes": 195.8, "faltas": 6.1, "escanteios": 2.3, "amarelo": 1.0, "vermelho": 0.0, "posse": 54.2}, "Fortaleza": {"chutes": 8.5, "alvo": 2.8, "passes": 222.4, "faltas": 8.4, "escanteios": 3.1, "amarelo": 1.3, "vermelho": 0.1, "posse": 48.9}, "Goias": {"chutes": 4.1, "alvo": 1.0, "passes": 111.2, "faltas": 5.0, "escanteios": 1.5, "amarelo": 0.9, "vermelho": 0.0, "posse": 43.3}, "Gremio": {"chutes": 6.5, "alvo": 1.8, "passes": 209.5, "faltas": 5.9, "escanteios": 2.6, "amarelo": 0.9, "vermelho": 0.0, "posse": 54.8}, "Gremio Prudente": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "Guarani": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "Internacional": {"chutes": 5.7, "alvo": 1.6, "passes": 180.0, "faltas": 6.1, "escanteios": 2.5, "amarelo": 1.0, "vermelho": 0.0, "posse": 52.8}, "Ipatinga": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "Joinville": {"chutes": 12.6, "alvo": 0.2, "passes": 367.8, "faltas": 17.2, "escanteios": 5.7, "amarelo": 2.8, "vermelho": 0.2, "posse": 48.9}, "Juventude": {"chutes": 4.1, "alvo": 1.3, "passes": 114.1, "faltas": 4.8, "escanteios": 1.6, "amarelo": 0.8, "vermelho": 0.0, "posse": 46.0}, "Mirassol": {"chutes": 12.8, "alvo": 5.7, "passes": 371.1, "faltas": 11.6, "escanteios": 5.9, "amarelo": 2.1, "vermelho": 0.1, "posse": 50.6}, "Nautico": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "Palmeiras": {"chutes": 7.8, "alvo": 2.3, "passes": 203.8, "faltas": 7.2, "escanteios": 3.2, "amarelo": 1.0, "vermelho": 0.0, "posse": 54.0}, "Parana": {"chutes": 2.1, "alvo": 0.5, "passes": 53.5, "faltas": 2.5, "escanteios": 0.8, "amarelo": 0.5, "vermelho": 0.0, "posse": 41.8}, "Paysandu": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "Ponte Preta": {"chutes": 4.2, "alvo": 0.5, "passes": 121.2, "faltas": 5.4, "escanteios": 1.9, "amarelo": 0.8, "vermelho": 0.0, "posse": 48.1}, "Portuguesa": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "Santa Cruz": {"chutes": 6.9, "alvo": 0.0, "passes": 206.4, "faltas": 7.7, "escanteios": 3.3, "amarelo": 1.0, "vermelho": 0.1, "posse": 49.9}, "Santo Andre": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "Santos": {"chutes": 6.5, "alvo": 1.8, "passes": 193.0, "faltas": 6.4, "escanteios": 2.7, "amarelo": 1.0, "vermelho": 0.0, "posse": 52.3}, "Sao Caetano": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "Sao Paulo": {"chutes": 6.1, "alvo": 1.6, "passes": 196.1, "faltas": 6.4, "escanteios": 2.6, "amarelo": 0.9, "vermelho": 0.0, "posse": 55.0}, "Sport": {"chutes": 7.6, "alvo": 1.7, "passes": 240.1, "faltas": 8.5, "escanteios": 3.3, "amarelo": 1.3, "vermelho": 0.0, "posse": 50.1}, "Vasco": {"chutes": 5.3, "alvo": 1.6, "passes": 153.0, "faltas": 5.7, "escanteios": 2.1, "amarelo": 0.9, "vermelho": 0.0, "posse": 50.4}, "Vitoria": {"chutes": 4.6, "alvo": 1.0, "passes": 117.7, "faltas": 5.3, "escanteios": 1.9, "amarelo": 0.8, "vermelho": 0.1, "posse": 48.9}}, "visitante": {"America-MG": {"chutes": 9.5, "alvo": 2.6, "passes": 304.1, "faltas": 12.5, "escanteios": 3.6, "amarelo": 1.8, "vermelho": 0.1, "posse": 43.7}, "America-RN": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "Athletico-PR": {"chutes": 4.2, "alvo": 1.1, "passes": 161.8, "faltas": 6.1, "escanteios": 1.7, "amarelo": 0.9, "vermelho": 0.1, "posse": 47.8}, "Atletico-GO": {"chutes": 5.4, "alvo": 1.8, "passes": 195.6, "faltas": 7.6, "escanteios": 2.4, "amarelo": 1.2, "vermelho": 0.1, "posse": 45.9}, "Atletico-MG": {"chutes": 5.6, "alvo": 1.5, "passes": 203.0, "faltas": 6.4, "escanteios": 2.3, "amarelo": 1.1, "vermelho": 0.1, "posse": 53.6}, "Avai": {"chutes": 6.0, "alvo": 1.2, "passes": 209.5, "faltas": 7.8, "escanteios": 2.3, "amarelo": 1.4, "vermelho": 0.1, "posse": 43.6}, "Bahia": {"chutes": 6.2, "alvo": 2.0, "passes": 203.6, "faltas": 8.0, "escanteios": 2.5, "amarelo": 1.2, "vermelho": 0.1, "posse": 46.7}, "Barueri": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "Botafogo-RJ": {"chutes": 4.3, "alvo": 1.2, "passes": 154.6, "faltas": 5.5, "escanteios": 1.6, "amarelo": 1.0, "vermelho": 0.1, "posse": 47.2}, "Bragantino": {"chutes": 10.6, "alvo": 3.6, "passes": 335.9, "faltas": 12.6, "escanteios": 4.3, "amarelo": 2.0, "vermelho": 0.1, "posse": 50.4}, "Brasiliense": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "CSA": {"chutes": 7.6, "alvo": 2.3, "passes": 319.3, "faltas": 13.8, "escanteios": 2.5, "amarelo": 2.0, "vermelho": 0.2, "posse": 37.3}, "Ceara": {"chutes": 8.3, "alvo": 2.8, "passes": 269.1, "faltas": 10.8, "escanteios": 3.3, "amarelo": 1.9, "vermelho": 0.1, "posse": 44.1}, "Chapecoense": {"chutes": 9.2, "alvo": 1.8, "passes": 302.3, "faltas": 13.8, "escanteios": 3.6, "amarelo": 2.1, "vermelho": 0.1, "posse": 42.8}, "Corinthians": {"chutes": 4.5, "alvo": 1.2, "passes": 203.0, "faltas": 5.9, "escanteios": 1.9, "amarelo": 1.0, "vermelho": 0.1, "posse": 51.7}, "Coritiba": {"chutes": 4.5, "alvo": 1.0, "passes": 150.0, "faltas": 6.3, "escanteios": 1.7, "amarelo": 1.1, "vermelho": 0.1, "posse": 45.1}, "Criciuma": {"chutes": 0.1, "alvo": 0.0, "passes": 4.6, "faltas": 0.2, "escanteios": 0.1, "amarelo": 0.0, "vermelho": 0.0, "posse": 56.0}, "Cruzeiro": {"chutes": 4.0, "alvo": 0.9, "passes": 139.7, "faltas": 5.1, "escanteios": 1.6, "amarelo": 0.9, "vermelho": 0.1, "posse": 49.2}, "Cuiaba": {"chutes": 6.9, "alvo": 2.1, "passes": 269.1, "faltas": 10.1, "escanteios": 3.1, "amarelo": 1.7, "vermelho": 0.1, "posse": 41.4}, "Figueirense": {"chutes": 1.4, "alvo": 0.0, "passes": 57.0, "faltas": 3.1, "escanteios": 0.6, "amarelo": 0.5, "vermelho": 0.0, "posse": 42.4}, "Flamengo": {"chutes": 5.3, "alvo": 1.6, "passes": 205.2, "faltas": 6.0, "escanteios": 2.3, "amarelo": 1.0, "vermelho": 0.1, "posse": 56.5}, "Fluminense": {"chutes": 4.7, "alvo": 1.4, "passes": 190.0, "faltas": 5.9, "escanteios": 1.9, "amarelo": 1.0, "vermelho": 0.1, "posse": 52.6}, "Fortaleza": {"chutes": 6.3, "alvo": 2.2, "passes": 208.3, "faltas": 8.1, "escanteios": 2.5, "amarelo": 1.3, "vermelho": 0.1, "posse": 44.5}, "Goias": {"chutes": 3.6, "alvo": 0.9, "passes": 106.7, "faltas": 4.9, "escanteios": 1.3, "amarelo": 0.8, "vermelho": 0.0, "posse": 40.2}, "Gremio": {"chutes": 4.5, "alvo": 1.3, "passes": 184.8, "faltas": 5.8, "escanteios": 1.8, "amarelo": 1.0, "vermelho": 0.0, "posse": 49.8}, "Gremio Prudente": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "Guarani": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "Internacional": {"chutes": 4.4, "alvo": 1.2, "passes": 163.5, "faltas": 6.1, "escanteios": 1.8, "amarelo": 1.1, "vermelho": 0.1, "posse": 49.5}, "Ipatinga": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "Joinville": {"chutes": 9.2, "alvo": 0.0, "passes": 331.5, "faltas": 16.0, "escanteios": 4.8, "amarelo": 2.1, "vermelho": 0.2, "posse": 41.4}, "Juventude": {"chutes": 2.7, "alvo": 0.9, "passes": 108.8, "faltas": 4.5, "escanteios": 1.2, "amarelo": 0.9, "vermelho": 0.1, "posse": 43.1}, "Mirassol": {"chutes": 10.7, "alvo": 3.9, "passes": 404.0, "faltas": 11.1, "escanteios": 4.7, "amarelo": 2.5, "vermelho": 0.0, "posse": 53.5}, "Nautico": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "Palmeiras": {"chutes": 5.8, "alvo": 1.6, "passes": 187.5, "faltas": 7.4, "escanteios": 2.3, "amarelo": 1.2, "vermelho": 0.1, "posse": 50.4}, "Parana": {"chutes": 1.5, "alvo": 0.3, "passes": 52.9, "faltas": 2.3, "escanteios": 0.6, "amarelo": 0.3, "vermelho": 0.0, "posse": 40.7}, "Paysandu": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "Ponte Preta": {"chutes": 3.6, "alvo": 0.3, "passes": 118.9, "faltas": 5.1, "escanteios": 1.4, "amarelo": 0.8, "vermelho": 0.0, "posse": 44.5}, "Portuguesa": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "Santa Cruz": {"chutes": 5.0, "alvo": 0.0, "passes": 199.6, "faltas": 7.6, "escanteios": 1.9, "amarelo": 1.2, "vermelho": 0.1, "posse": 45.3}, "Santo Andre": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "Santos": {"chutes": 4.7, "alvo": 1.2, "passes": 183.8, "faltas": 6.3, "escanteios": 2.0, "amarelo": 1.1, "vermelho": 0.1, "posse": 50.1}, "Sao Caetano": {"chutes": 0.0, "alvo": 0.0, "passes": 0.0, "faltas": 0.0, "escanteios": 0.0, "amarelo": 0.0, "vermelho": 0.0, "posse": NaN}, "Sao Paulo": {"chutes": 4.7, "alvo": 1.2, "passes": 192.9, "faltas": 6.4, "escanteios": 2.0, "amarelo": 1.0, "vermelho": 0.1, "posse": 54.0}, "Sport": {"chutes": 6.0, "alvo": 1.3, "passes": 229.4, "faltas": 8.6, "escanteios": 2.5, "amarelo": 1.3, "vermelho": 0.1, "posse": 46.5}, "Vasco": {"chutes": 3.9, "alvo": 1.1, "passes": 148.4, "faltas": 5.4, "escanteios": 1.6, "amarelo": 1.0, "vermelho": 0.1, "posse": 46.9}, "Vitoria": {"chutes": 3.5, "alvo": 0.8, "passes": 111.3, "faltas": 5.5, "escanteios": 1.2, "amarelo": 0.9, "vermelho": 0.1, "posse": 44.3}}};
+
+const times = Object.keys(STATS.mandante).sort();
+
+function populateSelects() {
+  const m = document.getElementById('mandante');
+  const v = document.getElementById('visitante');
+  times.forEach((t, i) => {
+    m.innerHTML += `<option value="${t}">${t}</option>`;
+    v.innerHTML += `<option value="${t}" ${i===1?'selected':''}>${t}</option>`;
+  });
+}
+
+function atualizarStats() {
+  const mandante = document.getElementById('mandante').value;
+  const visitante = document.getElementById('visitante').value;
+
+  const sm = STATS.mandante[mandante] || {};
+  const sv = STATS.visitante[visitante] || {};
+
+  document.getElementById('col-m').textContent = mandante;
+  document.getElementById('col-v').textContent = visitante;
+  document.getElementById('aprov-label-m').textContent = mandante;
+  document.getElementById('aprov-label-v').textContent = visitante;
+
+  document.getElementById('chutes_m').value    = sm.chutes    || 0;
+  document.getElementById('alvo_m').value      = sm.alvo      || 0;
+  document.getElementById('passes_m').value    = sm.passes    || 0;
+  document.getElementById('faltas_m').value    = sm.faltas    || 0;
+  document.getElementById('escanteios_m').value= sm.escanteios|| 0;
+  document.getElementById('amarelo_m').value   = sm.amarelo   || 0;
+  document.getElementById('vermelho_m').value  = sm.vermelho  || 0;
+  document.getElementById('posse_m').value     = sm.posse     || 50;
+
+  document.getElementById('chutes_v').value    = sv.chutes    || 0;
+  document.getElementById('alvo_v').value      = sv.alvo      || 0;
+  document.getElementById('passes_v').value    = sv.passes    || 0;
+  document.getElementById('faltas_v').value    = sv.faltas    || 0;
+  document.getElementById('escanteios_v').value= sv.escanteios|| 0;
+  document.getElementById('amarelo_v').value   = sv.amarelo   || 0;
+  document.getElementById('vermelho_v').value  = sv.vermelho  || 0;
+  document.getElementById('posse_v').value     = sv.posse     || 50;
+}
+
+function sigmoid(x) { return 1 / (1 + Math.exp(-x)); }
+
+function prever() {
+  const get = id => parseFloat(document.getElementById(id).value) || 0;
+  const aprov_m = get('aprov_m') / 100;
+  const aprov_v = get('aprov_v') / 100;
+  const mandante = document.getElementById('mandante').value;
+  const visitante = document.getElementById('visitante').value;
+
+  const score =
+    (aprov_m - aprov_v) * 2.8 +
+    (get('chutes_m') - get('chutes_v')) * 0.08 +
+    (get('alvo_m') - get('alvo_v')) * 0.18 +
+    (get('passes_m') - get('passes_v')) * 0.003 +
+    (get('faltas_v') - get('faltas_m')) * 0.04 +
+    (get('escanteios_m') - get('escanteios_v')) * 0.06 +
+    (get('amarelo_v') - get('amarelo_m')) * 0.05 +
+    (get('vermelho_v') - get('vermelho_m')) * 0.15 +
+    (get('posse_m') - get('posse_v')) * 0.012 +
+    0.35;
+
+  let v_prob = Math.round(sigmoid(score + 0.4) * 58);
+  let d_prob = Math.round(sigmoid(-score + 0.1) * 45);
+  let e_prob = 100 - v_prob - d_prob;
+  if (e_prob < 5) { e_prob = 5; v_prob = Math.round((100 - e_prob) * 0.65); d_prob = 100 - e_prob - v_prob; }
+
+  document.getElementById('label-win').textContent = mandante;
+  document.getElementById('label-lose').textContent = visitante;
+
+  let winner, sub;
+  if (v_prob > d_prob && v_prob > e_prob) {
+    winner = mandante; sub = 'Favorito: ' + mandante + ' com ' + v_prob + '% de probabilidade';
+  } else if (d_prob > v_prob && d_prob > e_prob) {
+    winner = visitante; sub = 'Favorito: ' + visitante + ' com ' + d_prob + '% de probabilidade';
+  } else {
+    winner = 'Empate'; sub = 'Jogo equilibrado — ' + e_prob + '% de chance de empate';
+  }
+
+  document.getElementById('r-winner').textContent = winner;
+  document.getElementById('r-sub').textContent = sub;
+
+  setTimeout(() => {
+    document.getElementById('bar-win').style.width = v_prob + '%';
+    document.getElementById('bar-draw').style.width = e_prob + '%';
+    document.getElementById('bar-lose').style.width = d_prob + '%';
+    document.getElementById('pct-win').textContent = v_prob + '%';
+    document.getElementById('pct-draw').textContent = e_prob + '%';
+    document.getElementById('pct-lose').textContent = d_prob + '%';
+  }, 50);
+
+  const labels = ['Mandante', 'Empate', 'Visitante'];
+  const xgb = v_prob > d_prob && v_prob > e_prob ? 0 : d_prob > e_prob ? 2 : 1;
+  const rf  = score > 0.3 ? 0 : score < -0.3 ? 2 : 1;
+  const mlp = score > 0.1 ? 0 : score < -0.5 ? 2 : 1;
+
+  document.getElementById('pred-xgb').textContent = labels[xgb];
+  document.getElementById('pred-rf').textContent  = labels[rf];
+  document.getElementById('pred-mlp').textContent = labels[mlp];
+
+  const rs = document.getElementById('result-section');
+  rs.classList.add('show');
+  setTimeout(() => rs.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+}
+
+populateSelects();
+atualizarStats();
+</script>
+</body>
+</html>
