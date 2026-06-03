@@ -279,7 +279,7 @@ function aplicarStats(s, suf) {
   if (s.forma) renderForma(s.forma, 'forma-' + suf);
 }
 
-async function buscarStats(time, lado, tentativa = 1) {
+async function buscarStats(time, lado) {
   const key = time + '_' + lado;
   if (cache[key]) return cache[key];
   try {
@@ -291,10 +291,6 @@ async function buscarStats(time, lado, tentativa = 1) {
     cache[key] = data;
     return data;
   } catch(e) {
-    if (tentativa < 3) {
-      await new Promise(r => setTimeout(r, 3000));
-      return buscarStats(time, lado, tentativa + 1);
-    }
     const fb = lado === 'mandante' ? FALLBACK.mandante[time] : FALLBACK.visitante[time];
     return fb ? {...fb, forma: '', aproveitamento: 50} : null;
   }
