@@ -273,7 +273,7 @@ function aplicarStats(s, suf) {
   document.getElementById('escanteios_' + suf).value = s.escanteios || 0;
   document.getElementById('amarelo_' + suf).value    = s.amarelo    || 0;
   document.getElementById('posse_' + suf).value      = s.posse      || 50;
-  const aprov = s.aproveitamento || (suf === 'm' ? 60 : 40);
+  const aprov = s.aproveitamento !== undefined ? s.aproveitamento : (suf === 'm' ? 60 : 40);
   document.getElementById('aprov_' + suf).value = aprov;
   document.getElementById('aprov_' + suf + '_num').textContent = aprov;
   if (s.forma) renderForma(s.forma, 'forma-' + suf);
