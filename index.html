@@ -307,7 +307,7 @@ async function atualizarStats() {
   document.getElementById('label-win').textContent = mandante;
   document.getElementById('label-lose').textContent = visitante;
 
-  setInfo('Buscando dados em tempo real...', 'yellow');
+  setInfo('Carregando estatisticas...', 'yellow');
   document.getElementById('btn-predict').disabled = true;
 
   const [sm, sv] = await Promise.all([
@@ -318,7 +318,7 @@ async function atualizarStats() {
   if (sm) aplicarStats(sm, 'm');
   if (sv) aplicarStats(sv, 'v');
 
-  setInfo('Dados em tempo real carregados via Sofascore', 'green');
+  setInfo('Estatisticas carregadas com medias historicas do Brasileirao (2003-2023)', 'green');
   document.getElementById('btn-predict').disabled = false;
 }
 
